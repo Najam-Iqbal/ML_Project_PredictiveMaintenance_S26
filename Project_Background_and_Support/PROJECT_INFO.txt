@@ -1,0 +1,666 @@
+================================================================================
+                    PREDICTIVE MAINTENANCE PROJECT
+              ML-Based Machine Failure Detection and Diagnosis System
+================================================================================
+
+PROJECT OVERVIEW
+================================================================================
+This project implements a Machine Learning-based predictive maintenance system
+using decision trees to identify machine failures early and diagnose their root
+causes. The system processes real-time sensor data and provides predictions with
+configurable business logic based on operational priorities.
+
+Dataset: Predictive Maintenance Dataset (10,000 samples)
+- Training set: 8,000 samples (80%)
+- Test set: 2,000 samples (20%)
+- Target: Machine failure (binary classification)
+- Failure types: 6 classes (0=No failure, 1=TWF, 2=HDF, 3=PWF, 4=OSF, 5=RNF)
+
+
+I. DECISION TREES VS NAIVE BAYES COMPARISON
+================================================================================
+
+1. DECISION TREES (SELECTED)
+   ─────────────────────────────────────────────────────────────────────────
+
+   Advantages:
+   ✓ Interpretability: Clear decision paths showing feature importance
+   ✓ Non-linear relationships: Captures complex interaction patterns
+   ✓ No feature scaling required: Works with raw sensor data
+   ✓ Mixed data types: Handles both continuous and categorical features
+   ✓ Feature importance: Built-in feature importance scoring
+   ✓ Threshold tuning: Precise control via probability thresholds
+   ✓ Imbalanced data: Works well with SMOTE augmentation
+   ✓ Multi-output support: Binary, multilabel, and multiclass capability
+   
+   Performance on Dataset:
+   - Binary DT (13 features) @ 0.96 threshold:
+     * Precision: 0.7067 | Recall: 0.7794 | F1: 0.7413
+     * CV (5-fold): Precision 0.6942±0.0922, Recall 0.7343±0.0568
+   
+   - Multilabel DT (8 features) @ 0.96 threshold:
+     * Precision: 0.6667 | Recall: 0.6176 | F1: 0.6412
+     * CV (5-fold): Precision 0.5808±0.0392, Recall 0.6899±0.0387
+
+
+2. NAIVE BAYES (NOT SELECTED)
+   ─────────────────────────────────────────────────────────────────────────
+
+   Disadvantages for this use case:
+   ✗ Conditional independence assumption: Assumes features are independent,
+     which is false for sensor data (e.g., temperature correlates with torque)
+   ✗ Probabilistic output only: No interpretable decision rules
+   ✗ Poor with imbalanced data: Struggles without careful balancing
+   ✗ Feature scaling sensitivity: Requires preprocessing and normalization
+   ✗ Limited feature interactions: Cannot capture non-linear relationships
+   ✗ Binary classification focus: Multiclass is less intuitive
+   ✗ Threshold tuning: Less flexible threshold control
+   
+   Estimated performance on dataset (based on literature):
+   - Would achieve ~0.50-0.60 F1 score on this imbalanced dataset
+   - Higher false negatives (missed failures) = operationally risky
+   - Less explainable: Cannot justify why a failure was predicted
+
+
+3. COMPARISON SUMMARY
+   ─────────────────────────────────────────────────────────────────────────
+
+   Criterion              Decision Trees          Naive Bayes
+   ──────────────────────────────────────────────────────────────────────────
+   F1 Score              0.74 (Binary @ 0.96)    ~0.55
+   Interpretability      Excellent               Poor
+   Feature Importance    Available               Not available
+   Threshold Control     Precise                 Limited
+   Imbalanced Data       Excellent (w/ SMOTE)    Fair
+   Feature Interactions  Captures               Ignores
+   Explainability        High (decision paths)   Low (black box)
+   Production Ready      Yes                     No
+   ──────────────────────────────────────────────────────────────────────────
+
+
+II. WHY DECISION TREES WERE SELECTED
+================================================================================
+
+1. DOMAIN REQUIREMENTS
+   ─────────────────────────────────────────────────────────────────────────
+   
+   a) Explainability in Manufacturing:
+      - Engineers need to understand WHY a failure is predicted
+      - DTs provide clear decision rules showing feature thresholds
+      - Naive Bayes provides only probability values with no reasoning
+   
+   b) Actionability:
+      - Maintenance teams must act on predictions
+      - DT feature importance guides preventive interventions
+      - Example: "Reduce temperature by 5°C" → clear action
+   
+   c) Risk Management:
+      - Missed failures (false negatives) = equipment damage
+      - DT's high recall (0.78) minimizes missed failures
+      - Configurable thresholds allow safety-first tuning
+
+
+2. DATA CHARACTERISTICS
+   ─────────────────────────────────────────────────────────────────────────
+   
+   a) Imbalanced Dataset:
+      - 97% non-failure samples vs 3% failure samples
+      - DTs + SMOTE: Effective combination for this scenario
+      - Naive Bayes: Struggles without balanced data
+   
+   b) Sensor Data Properties:
+      - Non-linear relationships (e.g., temperature × speed interactions)
+      - DTs capture these automatically; NB assumes independence
+      - Derived features (Temp_Diff, Power_Estimate, etc.) boost DT performance
+   
+   c) Feature Types:
+      - Continuous (temperature, speed) + Categorical (machine type)
+      - DTs handle both natively
+      - NB requires additional preprocessing
+
+
+3. OPERATIONAL FLEXIBILITY
+   ─────────────────────────────────────────────────────────────────────────
+   
+   a) Threshold Tuning:
+      - Different business priorities require different thresholds
+      - Safety-first mode: Threshold 0.75 → High recall, tolerate false positives
+      - Cost-optimization mode: Threshold 0.96 → High precision, avoid false maintenance
+      - NB: Cannot achieve this level of control
+   
+   b) Multi-Output Capabilities:
+      - Binary: Failure or no failure
+      - Multilabel: Multiple concurrent failures
+      - DTs support all; NB is primarily binary
+   
+   c) Real-time Deployment:
+      - DTs are fast and deterministic
+      - No probabilistic distribution assumptions to violate
+      - Edge device deployment is straightforward
+
+
+4. PERFORMANCE METRICS
+   ─────────────────────────────────────────────────────────────────────────
+   
+   Binary DT (13 features) @ Threshold 0.96:
+   • Test Precision: 0.7067 (70.67%)
+     → When model predicts failure, it's correct 70.67% of the time
+   
+   • Test Recall: 0.7794 (77.94%)
+     → Catches 77.94% of actual failures (only 22% missed)
+   
+   • F1 Score: 0.7413
+     → Balanced performance across both metrics
+   
+   • Confusion Matrix (Test):
+     ├─ True Negatives: 1910 (correctly identified no failure)
+     ├─ True Positives: 53 (correctly identified failure)
+     ├─ False Positives: 22 (unnecessary maintenance predicted)
+     └─ False Negatives: 15 (failures missed - RISK)
+   
+   • Cross-Validation (5-fold):
+     ├─ Mean Precision: 0.6942 ± 0.0922
+     ├─ Mean Recall: 0.7343 ± 0.0568
+     └─ Mean F1: 0.7062 ± 0.0213
+
+
+III. GRADIO APP IMPLEMENTATION
+================================================================================
+
+1. APPLICATION ARCHITECTURE
+   ─────────────────────────────────────────────────────────────────────────
+
+   Component Hierarchy:
+   
+   ┌─ app.py (Gradio Interface)
+   │  └─ gradio.Interface / BlocksUI
+   │     ├─ Input Components (6 blocks)
+   │     │  ├─ Slider: Air Temperature (min/max/step)
+   │     │  ├─ Slider: Process Temperature
+   │     │  ├─ Slider: Rotational Speed
+   │     │  ├─ Slider: Torque
+   │     │  ├─ Slider: Tool Wear
+   │     │  └─ Dropdown: Machine Type (H/L/M)
+   │     │
+   │     ├─ Control Components
+   │     │  ├─ Radio: Business Priority
+   │     │  │  ├─ "Minimize missed failures"
+   │     │  │  └─ "Minimize unnecessary maintenance"
+   │     │  │
+   │     │  └─ Note: Diagnostic Detail is fixed to "All contributing causes" by default in the simplified UI.
+   │     │
+   │     └─ Output Components (3 blocks)
+   │        ├─ Textbox: Prediction Result
+   │        ├─ Table: Performance Metrics
+   │        └─ HTML: Decision Breakdown
+   │
+   ├─ router.py (Prediction Engine)
+   │  ├─ load_model() → Load .joblib files
+   │  ├─ _binary_gate() → Failure detection logic
+   │  ├─ predict() → Route to appropriate model
+   │  └─ MODEL_MAP → Configuration registry
+   │
+   ├─ Trained_models/ (Model Repository)
+   │  ├─ binary_decision_tree_feature_engineered_13features_threshold_0p96.joblib
+   │  └─ multilabel_decision_tree_multioutput_scaled_original_features.joblib
+   │
+   └─ model_metrics_fixed.json (Performance Data)
+      ├─ Binary DT metrics
+      └─ Multilabel DT metrics
+
+
+2. GRADIO INTERFACE COMPONENTS
+   ─────────────────────────────────────────────────────────────────────────
+
+   INPUT SECTION (Sensor Data):
+   ┌─────────────────────────────────────────┐
+   │ Machine Sensor Data Input               │
+   ├─────────────────────────────────────────┤
+   │ 1. Air Temperature [K]                  │
+   │    └─ Range: 298-305 K (25-32°C)        │
+   │                                          │
+   │ 2. Process Temperature [K]              │
+   │    └─ Range: 300-310 K (27-37°C)        │
+   │                                          │
+   │ 3. Rotational Speed [rpm]               │
+   │    └─ Range: 1500-2900 rpm              │
+   │                                          │
+   │ 4. Torque [Nm]                          │
+   │    └─ Range: 3-76 Nm                    │
+   │                                          │
+   │ 5. Tool Wear [min]                      │
+   │    └─ Range: 0-254 minutes              │
+   │                                          │
+   │ 6. Machine Type                         │
+   │    └─ Options: High (H), Low (L), Med(M)│
+   └─────────────────────────────────────────┘
+
+
+   CONFIGURATION SECTION (Business Logic):
+   ┌─────────────────────────────────────────┐
+   │ Operational Priority                    │
+   ├─────────────────────────────────────────┤
+   │ ○ Minimize missed failures              │
+   │   └─ Lower threshold (0.75)             │
+   │   └─ Maximize recall (catch all)        │
+   │   └─ Accept false positives             │
+   │                                          │
+   │ ○ Minimize unnecessary maintenance      │
+   │   └─ Higher threshold (0.96)            │
+   │   └─ Maximize precision                 │
+   │   └─ Only predict certain failures      │
+   └─────────────────────────────────────────┘
+
+   ┌─────────────────────────────────────────┐
+   │ Diagnostic Detail (Fixed)              │
+   ├─────────────────────────────────────────┤
+   │ All contributing causes                │
+   │   └─ Multilabel detection              │
+   │   └─ Multiple concurrent failure modes │
+   │   └─ Detailed diagnostic report        │
+   └─────────────────────────────────────────┘
+
+
+   OUTPUT SECTION (Results & Analysis):
+   ┌─────────────────────────────────────────┐
+   │ Prediction Result                       │
+   ├─────────────────────────────────────────┤
+   │ Status: ✓ FAILURE PREDICTED             │
+   │ Type: Tool Wear Failure (TWF)           │
+   │ Confidence: 78.94%                      │
+   │ Recommendation: Inspect tool immediately│
+   └─────────────────────────────────────────┘
+
+   ┌─────────────────────────────────────────┐
+   │ Model Performance Metrics               │
+   ├─────────────────────────────────────────┤
+   │ Metric          Test    CV Mean ± Std   │
+   ├─────────────────────────────────────────┤
+   │ Precision       0.7067  0.6942±0.0922  │
+   │ Recall          0.7794  0.7343±0.0568  │
+   │ F1 Score        0.7413  0.7062±0.0213  │
+   └─────────────────────────────────────────┘
+
+   ┌─────────────────────────────────────────┐
+   │ Feature Analysis (Decision Breakdown)   │
+   ├─────────────────────────────────────────┤
+   │ Most Influential Features:              │
+   │ 1. Tool Wear: 254 min → HIGH RISK      │
+   │ 2. Temperature Diff: 8K → Moderate     │
+   │ 3. Power Estimate: 45W → Moderate     │
+   └─────────────────────────────────────────┘
+
+
+3. USER INTERACTION FLOW
+   ─────────────────────────────────────────────────────────────────────────
+
+   Step 1: Enter Sensor Data
+   └─ User adjusts sliders to match real machine readings
+   └─ Updates trigger live preview of features
+
+   Step 2: Select Business Strategy
+   └─ Choose priority: Safety (minimize failures) or Cost (minimize waste)
+   └─ Note: Diagnostic detail is fixed to "All contributing causes" in the simplified UI.
+
+   Step 3: Click "Predict"
+   └─ Data validation and preprocessing
+   └─ Feature engineering (derived features calculated)
+   └─ Model routing based on selection
+   └─ Threshold applied to predictions
+
+   Step 4: View Results
+   └─ Prediction and confidence displayed
+   └─ Performance metrics shown for transparency
+   └─ Feature importance and breakdown provided
+   └─ Clear maintenance recommendations generated
+
+
+4. ERROR HANDLING & VALIDATION
+   ─────────────────────────────────────────────────────────────────────────
+
+   Input Validation:
+   ✓ Temperature range checks (K)
+   ✓ Speed/torque bounds validation
+   ✓ Tool wear positive check
+   ✓ Type dropdown validation
+
+   Inference Safety:
+   ✓ Model file existence checks
+   ✓ Feature dimension validation
+   ✓ Probability threshold enforcement
+   ✓ Graceful error messages to user
+
+
+IV. COMPLETE PROJECT WORKFLOW
+================================================================================
+
+1. DATA PIPELINE
+   ─────────────────────────────────────────────────────────────────────────
+
+   Phase 1: Data Collection & Loading
+   ┌─────────────────────────────────┐
+   │ Source: Predictive_M.csv        │
+   │ Records: 10,000 samples         │
+   │ Features: 6 base + 3 one-hot    │
+   └──────────────┬──────────────────┘
+                  │
+   Phase 2: Data Splitting
+   ├─ Stratified Split (80/20)
+   ├─ Random state = 42 (reproducibility)
+   ├─ Train: 8,000 samples
+   └─ Test: 2,000 samples
+
+   Phase 3: Feature Engineering (Training Set)
+   ├─ Base Features (8):
+   │  ├─ Air temperature [K]
+   │  ├─ Process temperature [K]
+   │  ├─ Rotational speed [rpm]
+   │  ├─ Torque [Nm]
+   │  ├─ Tool wear [min]
+   │  ├─ Type_H (one-hot)
+   │  ├─ Type_L (one-hot)
+   │  └─ Type_M (one-hot)
+   │
+   ├─ Engineered Features (5):
+   │  ├─ Temp_Diff = Process Temp - Air Temp
+   │  ├─ Speed_Torque_Product = RPM × Torque
+   │  ├─ Power_Estimate = (RPM/1000) × Torque
+   │  ├─ Wear_Speed_Ratio = Tool Wear / (RPM/1000)
+   │  └─ Thermal_Load = Temp_Diff × (RPM/1000)
+   │
+   └─ Total: 13 features (8 base + 5 engineered)
+
+   Phase 4: Data Preprocessing
+   ├─ Scaling: StandardScaler fitted on training
+   │  └─ Applied to both train and test
+   ├─ SMOTE Augmentation: Applied to training only
+   │  └─ Creates synthetic minority samples
+   │  └─ Balances class distribution
+   └─ Result: SMOTE-augmented training set ready
+
+
+2. MODEL TRAINING PIPELINE
+   ─────────────────────────────────────────────────────────────────────────
+
+   Model 1: Binary Decision Tree (13 features)
+   ┌─────────────────────────────────────────┐
+   │ Purpose: Failure detection gate         │
+   │ Input: All 13 features                  │
+   │ Output: Failure probability             │
+   │ Architecture:                           │
+   │ • max_depth = 10                        │
+   │ • criterion = 'gini'                    │
+   │ • min_samples_split = 5                 │
+   │ • min_samples_leaf = 2                  │
+   │ • Fitted on SMOTE-augmented data        │
+   │                                         │
+   │ Thresholds:                             │
+   │ • 0.75: High sensitivity (catch failures)│
+   │ • 0.96: High precision (avoid false +)  │
+   │                                         │
+   │ File: binary_decision_tree_feature_     │
+   │       engineered_13features_            │
+   │       threshold_0p96.joblib             │
+   │                                         │
+   │ Performance @ 0.96:                     │
+   │ • Precision: 0.7067 (70.67%)            │
+   │ • Recall: 0.7794 (77.94%)               │
+   │ • F1: 0.7413                            │
+   │ • CV Mean: 0.7062±0.0213                │
+   └─────────────────────────────────────────┘
+
+   Model 2: Multilabel Decision Tree (8 features)
+   ┌─────────────────────────────────────────┐
+   │ Purpose: Concurrent failure detection   │
+   │ Input: First 8 features (base only)     │
+   │ Output: Binary labels per failure type  │
+   │ Architecture:                           │
+   │ • MultiOutputClassifier wrapper         │
+   │ • One binary classifier per failure     │
+   │ • Fitted on SMOTE-augmented data        │
+   │                                         │
+   │ Thresholds:                             │
+   │ • 0.75: Sensitive detection             │
+   │ • 0.96: Conservative prediction         │
+   │                                         │
+   │ File: multilabel_decision_tree_         │
+   │       multioutput_scaled_original_      │
+   │       features.joblib                   │
+   │                                         │
+   │ Performance @ 0.96:                     │
+   │ • Precision: 0.6667 (66.67%)            │
+   │ • Recall: 0.6176 (61.76%)               │
+   │ • F1: 0.6412                            │
+   │ • CV Mean: 0.6299±0.0322                │
+   └─────────────────────────────────────────┘
+
+   Cross-Validation Strategy:
+   ┌─────────────────────────────────────────┐
+   │ 5-Fold Stratified K-Fold CV             │
+   ├─────────────────────────────────────────┤
+   │ For each fold:                          │
+   │ 1. Split data maintaining class ratio   │
+   │ 2. Apply feature engineering (fold)     │
+   │ 3. Fit new scaler on training fold      │
+   │ 4. Apply SMOTE to training fold only    │
+   │ 5. Train fresh model on augmented data  │
+   │ 6. Evaluate on original validation fold │
+   │ 7. Record precision, recall, F1         │
+   │                                         │
+   │ Result: Mean±Std across all folds       │
+   │ Indicates model stability & generalization
+   └─────────────────────────────────────────┘
+
+
+3. INFERENCE PIPELINE (Runtime)
+   ─────────────────────────────────────────────────────────────────────────
+
+   Step 1: Input Reception (Gradio Interface)
+   └─ User submits sensor readings + configuration
+   └─ Data passed to router.py
+
+   Step 2: Configuration Mapping
+   └─ (business_priority, diagnostic_detail) → MODEL_MAP entry
+   └─ Retrieves model names, thresholds, metrics
+
+   Step 3: Data Preprocessing
+   ├─ Feature engineering: calculate derived features
+   ├─ One-hot encoding: machine type
+   └─ Scaling: using training set statistics (pre-fitted)
+
+   Step 4: Binary Failure Gate
+   ├─ Load failure detection model (13 features)
+   ├─ Generate probability predictions
+   ├─ Apply threshold (0.75 or 0.96)
+   ├─ Output: failure_predicted (bool), failure_confidence (float)
+   │
+   └─ If NO failure predicted:
+      └─ Return "No failure" with confidence
+
+   Step 5: Conditional Cause Analysis
+   ├─ If failure predicted:
+   │  ├─ Use default diagnostic mode: "All contributing causes"
+   │  ├─ Load multilabel cause model
+   │  └─ Generate cause predictions & confidence
+   │
+   └─ Only if binary gate passed (prevents over-diagnosis)
+
+   Step 6: Output Formatting
+   ├─ Prediction: failure_predicted, failure_reason, confidence
+   ├─ Model Info: model_name, threshold, failure_threshold
+   └─ Metrics: precision, recall, F1 (from config)
+
+   Step 7: Gradio Display
+   ├─ Result card with prediction and confidence
+   ├─ Metrics table for transparency
+   ├─ Feature breakdown with decision information
+   └─ Recommendations based on prediction
+
+
+4. MODEL SELECTION ROUTING LOGIC
+   ─────────────────────────────────────────────────────────────────────────
+
+   Configuration 1: "Minimize missed failures"
+   ├─ Intent: Catch failures AND identify concurrent causes
+   ├─ Threshold: 0.75 (Low confidence requirement)
+   ├─ Failure Gate: Binary DT (13 features)
+   ├─ Cause Model: Multilabel DT (8 features)
+   ├─ Output: Primary failure + Secondary causes
+   ├─ Precision: 45.71% (liberal predictions)
+   ├─ Recall: 70.59% (good catch rate)
+   └─ Use case: Detailed diagnostics with safety focus
+
+   Configuration 2: "Minimize unnecessary maintenance"
+   ├─ Intent: Cost-optimized with detailed diagnostics
+   ├─ Threshold: 0.96 (High confidence requirement)
+   ├─ Failure Gate: Binary DT (13 features)
+   ├─ Cause Model: Multilabel DT (8 features)
+   ├─ Output: Failure/no-failure + contributing causes
+   ├─ Binary Precision: 70.67% (high confidence)
+   ├─ Binary Recall: 77.94% (reliable)
+   └─ Use case: Maintenance planning with cost control
+
+
+5. END-TO-END EXAMPLE
+   ─────────────────────────────────────────────────────────────────────────
+
+   User Input:
+   └─ Air Temp: 302K, Process Temp: 308K, Speed: 2400 rpm
+   └─ Torque: 45 Nm, Tool Wear: 180 min, Type: M
+   └─ Priority: "Minimize unnecessary maintenance"
+   └─ Detail: default "All contributing causes"
+
+   Processing:
+   1. Feature Engineering:
+      ├─ Temp_Diff = 308 - 302 = 6K
+      ├─ Speed_Torque_Product = 2400 × 45 = 108,000
+      ├─ Power_Estimate = (2400/1000) × 45 = 108W
+      ├─ Wear_Speed_Ratio = 180 / (2400/1000) = 75
+      └─ Thermal_Load = 6 × (2400/1000) = 14.4
+
+   2. Model Selection:
+      └─ Configuration: "Minimize unnecessary maintenance"
+      └─ Failure model: Binary DT (13 features)
+      └─ Cause model: Multilabel DT (8 features)
+      └─ Threshold: 0.96
+
+   3. Prediction:
+      └─ Binary model predicts probability 0.89 for failure
+      └─ 0.89 < 0.96 threshold
+      └─ Result: NO FAILURE PREDICTED
+
+   4. Output:
+      ├─ Status: ✓ No Failure
+      ├─ Confidence: 89.0% (inverted)
+      ├─ Model Performance: Precision 70.67%, Recall 77.94%
+      └─ Recommendation: Equipment operating normally
+
+
+6. PROJECT FILES & STRUCTURE
+   ─────────────────────────────────────────────────────────────────────────
+
+   Project_ML/
+   ├── Predictive_M.csv
+   │   └─ Source dataset (10,000 samples × 9 columns)
+   │
+   ├── Trained_models/
+   │   ├── binary_decision_tree_feature_engineered_13features_threshold_0p96.joblib
+   │   │   └─ Main failure detection model (binary classification)
+   │   │
+   │   └── multilabel_decision_tree_multioutput_scaled_original_features.joblib
+   │       └─ Multi-cause detection model (multilabel classification)
+   │
+   ├── router.py
+   │   ├─ load_model(): Lazy loading with caching
+   │   ├─ _binary_gate(): Failure detection logic
+   │   ├─ predict(): Main prediction function
+   │   ├─ MODEL_MAP: Configuration registry
+   │   └─ FAILURE_TYPES: Label mappings
+   │
+   ├── app.py (Gradio Interface)
+   │   ├─ Input Interface: 6 sensor sliders + 1 type dropdown
+   │   ├─ Configuration: Business Priority selection only
+   │   ├─ Diagnostic detail: fixed to "All contributing causes"
+   │   ├─ Output Display: Prediction + Metrics + Breakdown
+   │   └─ Event handlers: Input validation & result formatting
+   │
+   ├── generate_metrics_fixed.py
+   │   ├─ load_data(): Data loading and splitting
+   │   ├─ preprocess_fold(): Feature engineering
+   │   ├─ train_and_evaluate_*_model(): Test set evaluation
+   │   ├─ cross_validate_*_model(): 5-fold CV evaluation
+   │   └─ generate_metrics(): Complete metrics generation
+   │
+   ├── model_metrics_fixed.json
+   │   ├─ Binary DT (13 features): metrics at 0.75 & 0.96
+   │   └─ Multilabel DT (8 features): metrics at 0.75 & 0.96
+   │
+   ├── PROJECT_INFO.txt (this file)
+   │   └─ Complete project documentation
+   │
+   └── Documentation/
+       └─ Project submission files
+
+
+7. DEPLOYMENT & MONITORING
+   ─────────────────────────────────────────────────────────────────────────
+
+   Deployment Checklist:
+   □ All model files present and accessible
+   □ Feature engineering validated on new data
+   □ Preprocessing pipeline matches training
+   □ Threshold values documented and justified
+   □ Error handling for missing/invalid inputs
+   □ Model predictions logged for monitoring
+   □ Confidence scores tracked over time
+   □ False positive/negative rates monitored
+
+   Monitoring Metrics:
+   • Prediction distribution (failures per day/week)
+   • Average confidence scores
+   • False positive rate (unnecessary maintenance)
+   • False negative rate (missed failures) - CRITICAL
+   • Model prediction latency
+   • Input data quality metrics
+
+
+V. KEY INSIGHTS & CONCLUSIONS
+================================================================================
+
+1. WHY THIS APPROACH WORKS
+   ─────────────────────────────────────────────────────────────────────────
+   • Sensor data exhibits non-linear failure patterns → DTs excel
+   • Class imbalance handled by SMOTE augmentation
+   • Feature engineering captures domain knowledge
+   • Configurable thresholds provide operational flexibility
+   • Transparent decision-making suitable for regulated environment
+
+
+2. ACHIEVED PERFORMANCE
+   ─────────────────────────────────────────────────────────────────────────
+   • 77.94% recall: Catches almost 4 out of 5 real failures
+   • 70.67% precision: False alarms are acceptable trade-off
+   • Balanced F1 of 0.74: Good overall performance
+   • Cross-validation std ±0.02: Stable model
+
+
+3. LIMITATIONS & FUTURE IMPROVEMENTS
+   ─────────────────────────────────────────────────────────────────────────
+   • Current dataset is historical; real-time data may shift
+   • ~23% false negative rate requires further tuning
+   • Could benefit from ensemble methods (Random Forest)
+   • Deep learning could capture temporal patterns if time-series available
+   • Explainability could be enhanced with LIME/SHAP
+
+
+4. BUSINESS IMPACT
+   ─────────────────────────────────────────────────────────────────────────
+   • Reduce unplanned downtime by early failure detection
+   • Optimize maintenance schedule based on predictions
+   • Two modes support different operational strategies
+   • Transparent predictions enable operator trust
+
+
+================================================================================
+                              END OF DOCUMENTATION
+================================================================================
