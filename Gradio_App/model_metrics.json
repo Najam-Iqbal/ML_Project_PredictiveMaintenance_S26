@@ -2,78 +2,48 @@
   "Binary DT (13 features)": {
     "test_set": {
       "0.75": {
-        "precision": 0.8929,
-        "recall": 0.7353,
-        "f1": 0.8065,
-        "true_positives": 50,
-        "true_negatives": 1926,
-        "false_positives": 6,
-        "false_negatives": 18
+        "precision": 0.3958,
+        "recall": 0.8382,
+        "f1": 0.5377,
+        "true_positives": 57,
+        "true_negatives": 1845,
+        "false_positives": 87,
+        "false_negatives": 11
       },
       "0.96": {
-        "precision": 0.8929,
-        "recall": 0.7353,
-        "f1": 0.8065,
-        "true_positives": 50,
-        "true_negatives": 1926,
-        "false_positives": 6,
-        "false_negatives": 18
+        "precision": 0.7067,
+        "recall": 0.7794,
+        "f1": 0.7413,
+        "true_positives": 53,
+        "true_negatives": 1910,
+        "false_positives": 22,
+        "false_negatives": 15
       }
     },
     "cv_5fold": {
       "0.75": {
         "mean": {
-          "precision": 0.8867,
-          "recall": 0.7493,
-          "f1": 0.8117
+          "precision": 0.5062,
+          "recall": 0.7824,
+          "f1": 0.612
         },
         "std": {
-          "precision": 0.0442,
-          "recall": 0.0531,
-          "f1": 0.046
+          "precision": 0.0302,
+          "recall": 0.0607,
+          "f1": 0.009
         },
         "folds": 5
       },
       "0.96": {
         "mean": {
-          "precision": 0.8867,
-          "recall": 0.7493,
-          "f1": 0.8117
+          "precision": 0.6942,
+          "recall": 0.7343,
+          "f1": 0.7062
         },
         "std": {
-          "precision": 0.0442,
-          "recall": 0.0531,
-          "f1": 0.046
-        },
-        "folds": 5
-      }
-    },
-    "test_size": 2000,
-    "train_size": 8000
-  },
-  "Multiclass DT (8 features)": {
-    "test_set": {
-      "0.96": {
-        "precision": 0.8393,
-        "recall": 0.6912,
-        "f1": 0.7581,
-        "true_positives": 47,
-        "true_negatives": 1923,
-        "false_positives": 9,
-        "false_negatives": 21
-      }
-    },
-    "cv_5fold": {
-      "0.96": {
-        "mean": {
-          "precision": 0.773,
-          "recall": 0.6271,
-          "f1": 0.6895
-        },
-        "std": {
-          "precision": 0.0302,
-          "recall": 0.0862,
-          "f1": 0.0584
+          "precision": 0.0922,
+          "recall": 0.0568,
+          "f1": 0.0213
         },
         "folds": 5
       }
@@ -84,26 +54,48 @@
   "Multilabel DT (8 features)": {
     "test_set": {
       "0.75": {
-        "precision": 0.8393,
-        "recall": 0.6912,
-        "f1": 0.7581,
-        "true_positives": 47,
-        "true_negatives": 1923,
-        "false_positives": 9,
-        "false_negatives": 21
+        "precision": 0.4571,
+        "recall": 0.7059,
+        "f1": 0.5549,
+        "true_positives": 48,
+        "true_negatives": 1875,
+        "false_positives": 57,
+        "false_negatives": 20
+      },
+      "0.96": {
+        "precision": 0.6667,
+        "recall": 0.6176,
+        "f1": 0.6412,
+        "true_positives": 42,
+        "true_negatives": 1911,
+        "false_positives": 21,
+        "false_negatives": 26
       }
     },
     "cv_5fold": {
       "0.75": {
         "mean": {
-          "precision": 0.773,
-          "recall": 0.6271,
-          "f1": 0.6895
+          "precision": 0.4174,
+          "recall": 0.7304,
+          "f1": 0.531
         },
         "std": {
-          "precision": 0.0302,
-          "recall": 0.0862,
-          "f1": 0.0584
+          "precision": 0.0204,
+          "recall": 0.0515,
+          "f1": 0.0289
+        },
+        "folds": 5
+      },
+      "0.96": {
+        "mean": {
+          "precision": 0.5808,
+          "recall": 0.6899,
+          "f1": 0.6299
+        },
+        "std": {
+          "precision": 0.0392,
+          "recall": 0.0387,
+          "f1": 0.0322
         },
         "folds": 5
       }
